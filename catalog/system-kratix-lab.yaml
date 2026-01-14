@@ -1,0 +1,8 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: kratix-lab
+  title: Kratix Lab
+  description: PoC Kratix + Backstage + GitOps Requests
+spec:
+  owner: group:default/platform-team

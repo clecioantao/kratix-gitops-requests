@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: kratix-gitops-requests-catalog
+  description: Catálogo e Templates da PoC Kratix + Backstage (GitOps Requests)
+spec:
+  type: url
+  targets:
+    - ./system-kratix-lab.yaml
+    - ./component-backstage.yaml
+    - ./resource-kratix-gitstatestore.yaml
+    - ./resource-kratix-destination-worker-git.yaml
+    - ./resource-kratix-promise-postgresql.yaml

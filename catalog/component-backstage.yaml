@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: kratix-idp
+  title: Kratix IDP (Backstage)
+  description: Backstage rodando no kind-platform, servindo como frontend da PoC
+  tags:
+    - backstage
+    - idp
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:default/platform-team
+  system: kratix-lab

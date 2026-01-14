@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: kratix-gitstatestore-platform-git
+  title: Kratix GitStateStore (platform-git)
+  description: GitStateStore usado pelo Kratix para gravar outputs em repo Git
+spec:
+  type: gitstatestore
+  owner: group:default/platform-team
+  system: kratix-lab
