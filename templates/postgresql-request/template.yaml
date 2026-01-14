@@ -1,66 +1,69 @@
-# templates/postgresql-request/template.yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: postgresql-request
-  title: "Kratix - PostgreSQL (GitOps Request)"
-  description: "Cria um Resource Request de PostgreSQL para o Kratix via GitOps (commit no repo kratix-gitops-requests)."
+  name: kratix-postgresql
+  title: "Kratix: PostgreSQL (GitOps Request)"
+  description: "Cria um request de PostgreSQL para o Kratix e commita no repo GitOps."
   tags:
     - kratix
     - postgresql
     - gitops
 spec:
-  owner: group:default/platform
-  type: service
+  owner: user:default/guest
+  type: resource
 
   parameters:
-    - title: "Dados do request"
-      required:
-        - teamId
-        - dbName
-        - env
+    - title: Dados do PostgreSQL
+      required: [name, teamId, env]
       properties:
+        name:
+          title: Nome do resource
+          type: string
+          description: "Nome do PostgreSQL (ex: pg-sistema-x)"
         teamId:
           title: Team ID
           type: string
           default: acid
+        env:
+          title: Ambiente
+          type: string
+          default: dev
+          enum: [dev, prod]
         dbName:
           title: Database Name
           type: string
           default: postgres
-        env:
-          title: Environment
-          type: string
-          enum: [dev, prod]
-          default: dev
 
   steps:
-    - id: write
-      name: Gerar YAML do Resource Request
-      action: roadiehq:utils:write-file
+    - id: fetch
+      name: "Gerar manifest do request"
+      action: fetch:template
       input:
-        path: requests/${{ parameters.teamId }}/postgresql-${{ parameters.dbName }}-${{ parameters.env }}.yaml
-        content: |
-          apiVersion: marketplace.kratix.io/v1alpha1
-          kind: postgresql
-          metadata:
-            name: ${{ parameters.dbName }}-${{ parameters.env }}
-            namespace: default
-          spec:
-            teamId: ${{ parameters.teamId }}
-            dbName: ${{ parameters.dbName }}
-            env: ${{ parameters.env }}
+        targetPath: ./output
+        values:
+          name: ${{ parameters.name }}
+          teamId: ${{ parameters.teamId }}
+          env: ${{ parameters.env }}
+          dbName: ${{ parameters.dbName }}
 
     - id: publish
-      name: Commit no repo GitOps (kratix-gitops-requests)
-      action: publish:github:push
+      name: "Commit no repo GitOps"
+      action: publish:github
       input:
         repoUrl: github.com?owner=clecioantao&repo=kratix-gitops-requests
-        branchName: main
-        commitMessage: "Kratix request: postgresql ${{ parameters.dbName }} (${{ parameters.env }})"
-        sourcePath: .
+        defaultBranch: main
+        sourcePath: ./output
+        targetPath: requests/postgresql/${{ parameters.name }}
+        commitMessage: "Kratix request: postgresql ${{ parameters.name }}"
+
+    - id: register
+      name: "Registrar entidade no catálogo"
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: "/catalog/catalog-info.yaml"
 
   output:
     links:
-      - title: "Abrir repo GitOps"
-        url: https://github.com/clecioantao/kratix-gitops-requests
+      - title: "Ver repo GitOps"
+        url: ${{ steps.publish.output.remoteUrl }}
