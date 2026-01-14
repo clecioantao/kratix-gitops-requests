@@ -9,13 +9,14 @@ metadata:
     - kratix
     - postgresql
     - gitops
+
 spec:
   owner: user:default/guest
   type: resource
 
   parameters:
     - title: Dados do PostgreSQL
-      required: [name, teamId, env]
+      required: [name, teamId, env, dbName]
       properties:
         name:
           title: Nome do resource
@@ -40,6 +41,10 @@ spec:
       name: "Gerar manifest do request"
       action: fetch:template
       input:
+        # ✅ obrigatório: de onde o scaffolder vai puxar os arquivos do template
+        # Use "./" se os arquivos do template estiverem na mesma pasta do template.yaml
+        # ou "./content" se você tiver uma pasta content/ ao lado do template.yaml
+        url: ./
         targetPath: ./output
         values:
           name: ${{ parameters.name }}
@@ -62,9 +67,13 @@ spec:
       action: catalog:register
       input:
         repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
-        catalogInfoPath: "/catalog/catalog-info.yaml"
+        # ✅ precisa apontar para ONDE o catalog-info.yaml foi commitado
+        catalogInfoPath: "requests/postgresql/${{ parameters.name }}/catalog-info.yaml"
 
   output:
     links:
       - title: "Ver repo GitOps"
         url: ${{ steps.publish.output.remoteUrl }}
+      - title: "Abrir entidade no catálogo"
+        icon: catalog
+        entityRef: "component:default/${{ parameters.name }}"
