@@ -2,6 +2,7 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: kratix-postgresql
+  namespace: default
   title: "Kratix: PostgreSQL (GitOps Request)"
   description: "Cria um request de PostgreSQL para o Kratix e commita no repo GitOps."
   tags:
