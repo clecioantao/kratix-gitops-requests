@@ -6,4 +6,4 @@ metadata:
 spec:
   type: file
   targets:
-    - ../templates/postgresql-request/template.yaml
+    - https://github.com/clecioantao/kratix-gitops-requests/blob/main/catalog/catalog-info.yaml
