@@ -1,16 +1,13 @@
-# kratix-gitops-requests/templates/postgresql-request/template.yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: kratix-postgresql
-  namespace: default
-  title: "Kratix: PostgreSQL (GitOps Request)"
-  description: "Cria um request de PostgreSQL para o Kratix e commita no repo GitOps."
+  title: "Kratix: PostgreSQL (Provision Repo)"
+  description: "Gera um request de PostgreSQL para Kratix e provisiona um repositório com o manifesto."
   tags:
     - kratix
     - postgresql
     - gitops
-
 spec:
   owner: user:default/guest
   type: resource
@@ -36,22 +33,30 @@ spec:
           title: Database Name
           type: string
           default: postgres
-
         destinationEnvironment:
           title: Destination Environment
           type: string
           default: dev
           enum: [dev, prod]
-          description: "Seleciona o destino/cluster do Kratix via clusterSelectors.environment"
+          description: "Usado no clusterSelectors.environment para direcionar o destino."
+
+    - title: Escolha onde provisionar o repositório
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
 
   steps:
     - id: fetch
       name: "Gerar manifest do request"
       action: fetch:template
       input:
-        # ✅ essencial: renderizar APENAS o skeleton
         url: ./skeleton
-        targetPath: ./output
         values:
           name: ${{ parameters.name }}
           teamId: ${{ parameters.teamId }}
@@ -60,16 +65,23 @@ spec:
           destinationEnvironment: ${{ parameters.destinationEnvironment }}
 
     - id: publish
-      name: "Commit no repo GitOps"
+      name: "Provisionar repositório e publicar"
       action: publish:github
       input:
-        repoUrl: github.com?owner=clecioantao&repo=kratix-gitops-requests
-        defaultBranch: main
-        sourcePath: ./output
-        targetPath: requests/postgresql/${{ parameters.name }}
-        commitMessage: "Kratix request: postgresql ${{ parameters.name }}"
+        description: "Kratix request: postgresql ${{ parameters.name }}"
+        repoUrl: ${{ parameters.repoUrl }}
+
+    - id: register
+      name: "Registrar entidade no catálogo"
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: "/catalog-info.yaml"
 
   output:
     links:
-      - title: "Ver repo GitOps"
+      - title: Repository
         url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

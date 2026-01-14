@@ -1,9 +1,12 @@
 apiVersion: backstage.io/v1alpha1
-kind: Resource
+kind: Component
 metadata:
   name: ${{ values.name }}
-  description: "PostgreSQL provisionado via Kratix (GitOps Request)"
+  description: "Kratix request repo: postgresql ${{ values.name }}"
+  tags:
+    - kratix
+    - postgresql
 spec:
-  type: database
+  type: resource
+  lifecycle: experimental
   owner: user:default/guest
-  system: system:default/kratix-lab
