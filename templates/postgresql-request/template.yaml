@@ -1,3 +1,4 @@
+# kratix-gitops-requests/templates/postgresql-request/template.yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
@@ -5,7 +6,10 @@ metadata:
   namespace: default
   title: "Kratix: PostgreSQL (GitOps Request)"
   description: "Cria um request de PostgreSQL para o Kratix e commita no repo GitOps."
-  tags: [kratix, postgresql, gitops]
+  tags:
+    - kratix
+    - postgresql
+    - gitops
 
 spec:
   owner: user:default/guest
@@ -13,11 +17,12 @@ spec:
 
   parameters:
     - title: Dados do PostgreSQL
-      required: [name, teamId, env, dbName]
+      required: [name, teamId, env, dbName, destinationEnvironment]
       properties:
         name:
           title: Nome do resource
           type: string
+          description: "Nome do PostgreSQL (ex: pg-sistema-x)"
         teamId:
           title: Team ID
           type: string
@@ -32,19 +37,19 @@ spec:
           type: string
           default: postgres
 
-        # ✅ este campo existe no seu skeleton/request.yaml
         destinationEnvironment:
           title: Destination Environment
           type: string
           default: dev
           enum: [dev, prod]
+          description: "Seleciona o destino/cluster do Kratix via clusterSelectors.environment"
 
   steps:
     - id: fetch
       name: "Gerar manifest do request"
       action: fetch:template
       input:
-        # ✅ aqui é a chave: renderiza a pasta skeleton/
+        # ✅ essencial: renderizar APENAS o skeleton
         url: ./skeleton
         targetPath: ./output
         values:
