@@ -1,88 +1,66 @@
+# templates/postgresql-request/template.yaml
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: kratix-postgresql-request
-  title: Kratix - Request PostgreSQL (GitOps)
-  description: Gera um resource request (postgresql) e commita no repo GitOps para o Kratix reconciliar.
+  name: postgresql-request
+  title: "Kratix - PostgreSQL (GitOps Request)"
+  description: "Cria um Resource Request de PostgreSQL para o Kratix via GitOps (commit no repo kratix-gitops-requests)."
+  tags:
+    - kratix
+    - postgresql
+    - gitops
 spec:
-  owner: group:default/platform-team
+  owner: group:default/platform
   type: service
 
   parameters:
-    - title: Dados do Banco
-      required: [name, teamId, dbName, env]
+    - title: "Dados do request"
+      required:
+        - teamId
+        - dbName
+        - env
       properties:
-        name:
-          title: Nome do request
-          type: string
-          description: Ex: pg-app1
         teamId:
           title: Team ID
           type: string
           default: acid
         dbName:
-          title: Database name
+          title: Database Name
           type: string
           default: postgres
         env:
-          title: Ambiente
+          title: Environment
           type: string
-          default: dev
           enum: [dev, prod]
-
-    - title: Agendamento / Destino Kratix
-      required: [destinationEnvironment]
-      properties:
-        destinationEnvironment:
-          title: Label environment do Destination
-          type: string
-          description: >
-            Deve bater com matchLabels do Promise. Ex: "dev" (Destination worker-git tem environment=dev).
           default: dev
-
-    - title: Publicação (GitHub)
-      required: [repoUrl]
-      properties:
-        repoUrl:
-          title: Repositório GitOps (onde salvar o request)
-          type: string
-          description: Formato: github.com?owner=clecioantao&repo=kratix-gitops-requests
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - github.com
 
   steps:
-    - id: fetch
-      name: Render request
-      action: fetch:template
+    - id: write
+      name: Gerar YAML do Resource Request
+      action: roadiehq:utils:write-file
       input:
-        url: ./skeleton
-        values:
-          name: ${{ parameters.name }}
-          teamId: ${{ parameters.teamId }}
-          dbName: ${{ parameters.dbName }}
-          env: ${{ parameters.env }}
-          destinationEnvironment: ${{ parameters.destinationEnvironment }}
+        path: requests/${{ parameters.teamId }}/postgresql-${{ parameters.dbName }}-${{ parameters.env }}.yaml
+        content: |
+          apiVersion: marketplace.kratix.io/v1alpha1
+          kind: postgresql
+          metadata:
+            name: ${{ parameters.dbName }}-${{ parameters.env }}
+            namespace: default
+          spec:
+            teamId: ${{ parameters.teamId }}
+            dbName: ${{ parameters.dbName }}
+            env: ${{ parameters.env }}
 
     - id: publish
-      name: Publish to GitHub
-      action: publish:github
+      name: Commit no repo GitOps (kratix-gitops-requests)
+      action: publish:github:push
       input:
-        allowedHosts: ['github.com']
-        description: "Kratix GitOps request: ${{ parameters.name }}"
-        repoUrl: ${{ parameters.repoUrl }}
-        defaultBranch: main
+        repoUrl: github.com?owner=clecioantao&repo=kratix-gitops-requests
+        branchName: main
+        commitMessage: "Kratix request: postgresql ${{ parameters.dbName }} (${{ parameters.env }})"
         sourcePath: .
-
-    - id: register
-      name: Register in Catalog
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
-        catalogInfoPath: "/catalog/catalog-info.yaml"
 
   output:
     links:
-      - title: Repositório
-        url: ${{ steps.publish.output.remoteUrl }}
+      - title: "Abrir repo GitOps"
+        url: https://github.com/clecioantao/kratix-gitops-requests
