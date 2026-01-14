@@ -1,0 +1,14 @@
+apiVersion: marketplace.kratix.io/v1alpha1
+kind: postgresql
+metadata:
+  name: ${{ values.name }}
+  namespace: default
+spec:
+  teamId: ${{ values.teamId }}
+  dbName: ${{ values.dbName }}
+  env: ${{ values.env }}
+
+  # IMPORTANT: no seu Promise, esse é o campo aceito pelo CRD
+  # e é o que o pipeline usa para selecionar destination/cluster.
+  clusterSelectors:
+    environment: ${{ values.destinationEnvironment }}

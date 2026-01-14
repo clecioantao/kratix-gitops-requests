@@ -1,0 +1,88 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: kratix-postgresql-request
+  title: Kratix - Request PostgreSQL (GitOps)
+  description: Gera um resource request (postgresql) e commita no repo GitOps para o Kratix reconciliar.
+spec:
+  owner: group:default/platform-team
+  type: service
+
+  parameters:
+    - title: Dados do Banco
+      required: [name, teamId, dbName, env]
+      properties:
+        name:
+          title: Nome do request
+          type: string
+          description: Ex: pg-app1
+        teamId:
+          title: Team ID
+          type: string
+          default: acid
+        dbName:
+          title: Database name
+          type: string
+          default: postgres
+        env:
+          title: Ambiente
+          type: string
+          default: dev
+          enum: [dev, prod]
+
+    - title: Agendamento / Destino Kratix
+      required: [destinationEnvironment]
+      properties:
+        destinationEnvironment:
+          title: Label environment do Destination
+          type: string
+          description: >
+            Deve bater com matchLabels do Promise. Ex: "dev" (Destination worker-git tem environment=dev).
+          default: dev
+
+    - title: Publicação (GitHub)
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: Repositório GitOps (onde salvar o request)
+          type: string
+          description: Formato: github.com?owner=clecioantao&repo=kratix-gitops-requests
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+  steps:
+    - id: fetch
+      name: Render request
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          teamId: ${{ parameters.teamId }}
+          dbName: ${{ parameters.dbName }}
+          env: ${{ parameters.env }}
+          destinationEnvironment: ${{ parameters.destinationEnvironment }}
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: "Kratix GitOps request: ${{ parameters.name }}"
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+        sourcePath: .
+
+    - id: register
+      name: Register in Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: "/catalog/catalog-info.yaml"
+
+  output:
+    links:
+      - title: Repositório
+        url: ${{ steps.publish.output.remoteUrl }}
