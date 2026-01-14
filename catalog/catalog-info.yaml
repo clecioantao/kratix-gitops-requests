@@ -11,3 +11,4 @@ spec:
     - ./resource-kratix-gitstatestore.yaml
     - ./resource-kratix-destination-worker-git.yaml
     - ./resource-kratix-promise-postgresql.yaml
+    - ./location-templates.yaml 
