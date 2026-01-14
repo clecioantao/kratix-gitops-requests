@@ -5,10 +5,7 @@ metadata:
   namespace: default
   title: "Kratix: PostgreSQL (GitOps Request)"
   description: "Cria um request de PostgreSQL para o Kratix e commita no repo GitOps."
-  tags:
-    - kratix
-    - postgresql
-    - gitops
+  tags: [kratix, postgresql, gitops]
 
 spec:
   owner: user:default/guest
@@ -21,7 +18,6 @@ spec:
         name:
           title: Nome do resource
           type: string
-          description: "Nome do PostgreSQL (ex: pg-sistema-x)"
         teamId:
           title: Team ID
           type: string
@@ -36,21 +32,27 @@ spec:
           type: string
           default: postgres
 
+        # ✅ este campo existe no seu skeleton/request.yaml
+        destinationEnvironment:
+          title: Destination Environment
+          type: string
+          default: dev
+          enum: [dev, prod]
+
   steps:
     - id: fetch
       name: "Gerar manifest do request"
       action: fetch:template
       input:
-        # ✅ obrigatório: de onde o scaffolder vai puxar os arquivos do template
-        # Use "./" se os arquivos do template estiverem na mesma pasta do template.yaml
-        # ou "./content" se você tiver uma pasta content/ ao lado do template.yaml
-        url: ./
+        # ✅ aqui é a chave: renderiza a pasta skeleton/
+        url: ./skeleton
         targetPath: ./output
         values:
           name: ${{ parameters.name }}
           teamId: ${{ parameters.teamId }}
           env: ${{ parameters.env }}
           dbName: ${{ parameters.dbName }}
+          destinationEnvironment: ${{ parameters.destinationEnvironment }}
 
     - id: publish
       name: "Commit no repo GitOps"
@@ -62,18 +64,7 @@ spec:
         targetPath: requests/postgresql/${{ parameters.name }}
         commitMessage: "Kratix request: postgresql ${{ parameters.name }}"
 
-    - id: register
-      name: "Registrar entidade no catálogo"
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
-        # ✅ precisa apontar para ONDE o catalog-info.yaml foi commitado
-        catalogInfoPath: "requests/postgresql/${{ parameters.name }}/catalog-info.yaml"
-
   output:
     links:
       - title: "Ver repo GitOps"
         url: ${{ steps.publish.output.remoteUrl }}
-      - title: "Abrir entidade no catálogo"
-        icon: catalog
-        entityRef: "component:default/${{ parameters.name }}"
