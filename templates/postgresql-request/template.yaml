@@ -29,35 +29,30 @@ spec:
         namespace:
           title: Namespace
           type: string
-          description: "Namespace onde o CR do Kratix será criado (ex: default)"
           default: default
         teamId:
           title: Team ID
           type: string
-          description: "TeamId usado pelo Postgres Operator (ex: acid)"
           default: acid
         dbName:
           title: Nome do DB
           type: string
-          description: "Nome do database a ser criado (ex: postgres)"
           default: postgres
         env:
           title: env (campo do CR)
           type: string
-          description: "Campo env do seu CR (ex: dev)"
           default: dev
         environment:
           title: clusterSelectors.environment
           type: string
-          description: "Vai selecionar o destino/cluster no Kratix (ex: dev)"
           default: dev
 
-    - title: Repositório (Monorepo)
+    - title: Monorepo (commit direto)
       required:
         - repoUrl
       properties:
         repoUrl:
-          title: Repositório GitHub
+          title: Repositório GitHub (monorepo existente)
           type: string
           description: "Formato: github.com?owner=<ORG|USER>&repo=<REPO>"
           ui:field: RepoUrlPicker
@@ -79,36 +74,36 @@ spec:
           env: ${{ parameters.env }}
           environment: ${{ parameters.environment }}
 
-    # 1) cria uma pasta temporária fixa com os arquivos renderizados
-    # 2) move para platform/requests/postgresql/<name>
     - id: move
-      name: Mover para a pasta final (sem {{}} no path)
+      name: Mover para a pasta final
       action: fs:rename
       input:
         files:
           - from: platform/requests/postgresql/_request
             to: platform/requests/postgresql/${{ parameters.name }}
 
-    - id: publish
-      name: Commitar no monorepo (main)
-      action: publish:github
+    # ✅ Aqui é o pulo do gato: push dentro do repo EXISTENTE
+    - id: push
+      name: Commit no monorepo (main)
+      action: github:repo:push
       input:
         repoUrl: ${{ parameters.repoUrl }}
-        defaultBranch: main
-        # OBS: não use branch/commitMessage aqui, seu Backstage rejeitou (schema do action)
-        description: "Request Kratix PostgreSQL: ${{ parameters.name }}"
+        branchName: main
+        commitMessage: "feat(kratix): request postgresql ${{ parameters.name }}"
+        sourcePath: .
+        targetPath: .
 
     - id: register
       name: Registrar no Catálogo
       action: catalog:register
       input:
-        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        repoContentsUrl: ${{ steps.push.output.repoContentsUrl }}
         catalogInfoPath: platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml
 
   output:
     links:
-      - title: Repositório
-        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Monorepo
+        url: ${{ steps.push.output.remoteUrl }}
       - title: Entidade no Catálogo
         icon: catalog
         entityRef: ${{ steps.register.output.entityRef }}
