@@ -2,94 +2,113 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: kratix-postgresql-monorepo
-  title: Kratix - PostgreSQL (Monorepo)
-  description: "Cria um request PostgreSQL no monorepo GitOps para o Kratix reconciliar"
+  title: "Kratix: PostgreSQL (Monorepo Requests)"
+  description: "Cria um request PostgreSQL do Kratix dentro de um monorepo (platform/requests/...)."
   tags:
     - kratix
-    - gitops
     - postgresql
-
+    - gitops
 spec:
   owner: user:default/guest
   type: resource
 
   parameters:
-    - title: "Informações do Banco"
+    - title: Dados do Request
       required:
         - name
         - namespace
         - teamId
         - dbName
-        - env
         - environment
       properties:
         name:
-          title: "Nome do recurso"
+          title: Nome do recurso
           type: string
           description: "Nome do CR do Kratix (ex: clecio-banco-kratix-2)"
-          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+          pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
         namespace:
-          title: "Namespace Kubernetes"
+          title: Namespace
           type: string
           description: "Namespace onde o CR do Kratix será criado (ex: default)"
-          default: "default"
+          default: default
         teamId:
-          title: "Team ID"
+          title: Team ID
           type: string
-          description: "teamId esperado pelo Promise (ex: acid)"
-          default: "acid"
+          description: "TeamId usado pelo Postgres Operator (ex: acid)"
+          default: acid
         dbName:
-          title: "Nome do DB"
+          title: Nome do DB
           type: string
-          description: "Nome do database (ex: postgres)"
-          default: "postgres"
+          description: "Nome do database a ser criado (ex: postgres)"
+          default: postgres
         env:
-          title: "Env (campo do seu CR)"
+          title: env (campo do CR)
           type: string
-          description: "Campo env do request (ex: dev)"
-          default: "dev"
+          description: "Campo env do seu CR (ex: dev)"
+          default: dev
         environment:
-          title: "Cluster Selector - environment"
+          title: clusterSelectors.environment
           type: string
-          description: "Valor do clusterSelectors.environment usado pelo pipeline (ex: dev)"
-          default: "dev"
+          description: "Vai selecionar o destino/cluster no Kratix (ex: dev)"
+          default: dev
 
-    - title: "Destino no Monorepo"
+    - title: Repositório (Monorepo)
       required:
         - repoUrl
       properties:
         repoUrl:
-          title: "Monorepo GitHub"
+          title: Repositório GitHub
           type: string
-          description: "Formato: github.com?owner=ORG&repo=REPO"
-          default: "github.com?owner=clecioantao&repo=kratix-gitops-mono"
+          description: "Formato: github.com?owner=<ORG|USER>&repo=<REPO>"
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
 
   steps:
     - id: fetch
-      name: "Gerar arquivos do request"
+      name: Gerar arquivos do request
       action: fetch:template
       input:
         url: ./skeleton
         values:
-          name: "${{ parameters.name }}"
-          namespace: "${{ parameters.namespace }}"
-          teamId: "${{ parameters.teamId }}"
-          dbName: "${{ parameters.dbName }}"
-          env: "${{ parameters.env }}"
-          environment: "${{ parameters.environment }}"
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace }}
+          teamId: ${{ parameters.teamId }}
+          dbName: ${{ parameters.dbName }}
+          env: ${{ parameters.env }}
+          environment: ${{ parameters.environment }}
 
-    - id: pr
-      name: "Abrir Pull Request no monorepo (DEV)"
-      action: publish:github:pull-request
+    # 1) cria uma pasta temporária fixa com os arquivos renderizados
+    # 2) move para platform/requests/postgresql/<name>
+    - id: move
+      name: Mover para a pasta final (sem {{}} no path)
+      action: fs:rename
       input:
-        repoUrl: "${{ parameters.repoUrl }}"
-        title: "feat(kratix): request postgresql ${{ parameters.name }}"
-        description: "Kratix request gerado pelo Backstage para o recurso: ${{ parameters.name }}"
-        branchName: "kratix/postgresql-${{ parameters.name }}"
+        files:
+          - from: platform/requests/postgresql/_request
+            to: platform/requests/postgresql/${{ parameters.name }}
+
+    - id: publish
+      name: Commitar no monorepo (main)
+      action: publish:github
+      input:
+        repoUrl: ${{ parameters.repoUrl }}
+        defaultBranch: main
+        # OBS: não use branch/commitMessage aqui, seu Backstage rejeitou (schema do action)
+        description: "Request Kratix PostgreSQL: ${{ parameters.name }}"
+
+    - id: register
+      name: Registrar no Catálogo
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml
 
   output:
     links:
-      - title: "Pull Request"
-        url: "${{ steps.pr.output.remoteUrl }}"
-      - title: "Repositório (monorepo)"
-        url: "${{ steps.pr.output.repoContentsUrl }}"
+      - title: Repositório
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Entidade no Catálogo
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}

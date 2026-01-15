@@ -1,8 +1,8 @@
 apiVersion: backstage.io/v1alpha1
 kind: Component
 metadata:
-  name: postgresql-{{ values.name }}
-  description: "Request Kratix PostgreSQL - {{ values.name }}"
+  name: postgresql-${{ values.name }}
+  description: "Request Kratix PostgreSQL - ${{ values.name }}"
   tags:
     - kratix
     - postgresql
