@@ -4,57 +4,49 @@ metadata:
   name: kratix-postgresql-monorepo
   title: "Kratix: PostgreSQL (Monorepo Requests)"
   description: "Cria um request PostgreSQL do Kratix dentro de um monorepo (platform/requests/...)."
-  tags:
-    - kratix
-    - postgresql
-    - gitops
 spec:
   owner: user:default/guest
-  type: resource
+  type: service
 
   parameters:
-    - title: Dados do Request
-      required:
-        - name
-        - namespace
-        - teamId
-        - dbName
-        - environment
+    - title: "Dados do Request"
+      required: ["name", "namespace", "teamId", "dbName", "env", "environment"]
       properties:
         name:
-          title: Nome do recurso
+          title: "Nome do request"
           type: string
           description: "Nome do CR do Kratix (ex: clecio-banco-kratix-2)"
           pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
         namespace:
-          title: Namespace
+          title: "Namespace"
           type: string
-          default: default
+          default: "default"
         teamId:
-          title: Team ID
+          title: "Team ID"
           type: string
-          default: acid
+          default: "acid"
         dbName:
-          title: Nome do DB
+          title: "DB Name"
           type: string
-          default: postgres
+          default: "postgres"
         env:
-          title: env (campo do CR)
+          title: "Env"
           type: string
-          default: dev
+          default: "dev"
+          enum: ["dev", "stg", "prd"]
         environment:
-          title: clusterSelectors.environment
+          title: "clusterSelectors.environment"
           type: string
-          default: dev
+          default: "dev"
+          enum: ["dev", "stg", "prd"]
 
-    - title: Monorepo (commit direto)
-      required:
-        - repoUrl
+    - title: "Monorepo (commit direto)"
+      required: ["repoUrl"]
       properties:
         repoUrl:
-          title: Repositório GitHub (monorepo existente)
+          title: "Repositório GitHub (monorepo existente)"
           type: string
-          description: "Formato: github.com?owner=<ORG|USER>&repo=<REPO>"
+          description: "Escolha o repo onde os requests vivem (ex: kratix-gitops-mono)."
           ui:field: RepoUrlPicker
           ui:options:
             allowedHosts:
@@ -62,9 +54,10 @@ spec:
 
   steps:
     - id: fetch
-      name: Gerar arquivos do request
+      name: "Gerar arquivos do request"
       action: fetch:template
       input:
+        # ✅ Na sua versão é url (não template)
         url: ./skeleton
         values:
           name: ${{ parameters.name }}
@@ -75,35 +68,31 @@ spec:
           environment: ${{ parameters.environment }}
 
     - id: move
-      name: Mover para a pasta final
+      name: "Mover para a pasta final (sem {{}} no path)"
       action: fs:rename
       input:
         files:
           - from: platform/requests/postgresql/_request
             to: platform/requests/postgresql/${{ parameters.name }}
 
-    # ✅ Aqui é o pulo do gato: push dentro do repo EXISTENTE
     - id: push
-      name: Commit no monorepo (main)
+      name: "Commitar no monorepo (main)"
       action: github:repo:push
       input:
         repoUrl: ${{ parameters.repoUrl }}
-        branchName: main
-        commitMessage: "feat(kratix): request postgresql ${{ parameters.name }}"
+        defaultBranch: main
+        protectDefaultBranch: false
+        # ✅ Na sua action é gitCommitMessage (não commitMessage)
+        gitCommitMessage: "feat(kratix): request postgresql ${{ parameters.name }}"
+        # ✅ Na sua action é sourcePath (não targetPath)
         sourcePath: .
-        targetPath: .
-
-    - id: register
-      name: Registrar no Catálogo
-      action: catalog:register
-      input:
-        repoContentsUrl: ${{ steps.push.output.repoContentsUrl }}
-        catalogInfoPath: platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml
+        # Se você tiver integração do GitHub configurada no Backstage, pode remover token.
+        # Se NÃO tiver, precisa passar token (PAT) via secrets/config.
+        # token: ${{ secrets.GITHUB_TOKEN }}
 
   output:
     links:
-      - title: Monorepo
+      - title: "Repositório (monorepo)"
         url: ${{ steps.push.output.remoteUrl }}
-      - title: Entidade no Catálogo
-        icon: catalog
-        entityRef: ${{ steps.register.output.entityRef }}
+      - title: "Conteúdo no GitHub"
+        url: ${{ steps.push.output.repoContentsUrl }}
