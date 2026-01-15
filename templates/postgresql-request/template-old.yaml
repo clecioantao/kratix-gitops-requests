@@ -1,0 +1,87 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: kratix-postgresql
+  title: "Kratix: PostgreSQL (Provision Repo)"
+  description: "Gera um request de PostgreSQL para Kratix e provisiona um repositório com o manifesto."
+  tags:
+    - kratix
+    - postgresql
+    - gitops
+spec:
+  owner: user:default/guest
+  type: resource
+
+  parameters:
+    - title: Dados do PostgreSQL
+      required: [name, teamId, env, dbName, destinationEnvironment]
+      properties:
+        name:
+          title: Nome do resource
+          type: string
+          description: "Nome do PostgreSQL (ex: pg-sistema-x)"
+        teamId:
+          title: Team ID
+          type: string
+          default: acid
+        env:
+          title: Ambiente
+          type: string
+          default: dev
+          enum: [dev, prod]
+        dbName:
+          title: Database Name
+          type: string
+          default: postgres
+        destinationEnvironment:
+          title: Destination Environment
+          type: string
+          default: dev
+          enum: [dev, prod]
+          description: "Usado no clusterSelectors.environment para direcionar o destino."
+
+    - title: Escolha onde provisionar o repositório
+      required: [repoUrl]
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+
+  steps:
+    - id: fetch
+      name: "Gerar manifest do request"
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          teamId: ${{ parameters.teamId }}
+          env: ${{ parameters.env }}
+          dbName: ${{ parameters.dbName }}
+          destinationEnvironment: ${{ parameters.destinationEnvironment }}
+
+    - id: publish
+      name: "Provisionar repositório e publicar"
+      action: publish:github
+      input:
+        description: "Kratix request: postgresql ${{ parameters.name }}"
+        repoUrl: ${{ parameters.repoUrl }}
+
+    - id: register
+      name: "Registrar entidade no catálogo"
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
+        catalogInfoPath: "/catalog-info.yaml"
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
