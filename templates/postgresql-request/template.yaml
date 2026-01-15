@@ -3,17 +3,18 @@ kind: Template
 metadata:
   name: kratix-postgresql-monorepo
   title: Kratix - PostgreSQL (Monorepo)
-  description: Cria um request de PostgreSQL no monorepo GitOps para o Kratix reconciliar
+  description: "Cria um request de PostgreSQL no monorepo GitOps para o Kratix reconciliar"
   tags:
     - kratix
     - gitops
     - postgresql
+
 spec:
   owner: user:default/guest
   type: service
 
   parameters:
-    - title: Informações do Banco
+    - title: "Informações do Banco"
       required:
         - name
         - namespace
@@ -23,72 +24,65 @@ spec:
         - environment
       properties:
         name:
-          title: Nome do recurso
+          title: "Nome do recurso"
           type: string
-          description: Nome do CR do Kratix (ex: clecio-banco-kratix-2)
-          pattern: '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'
+          description: "Nome do CR do Kratix (ex: clecio-banco-kratix-2)"
+          pattern: "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
         namespace:
-          title: Namespace Kubernetes
+          title: "Namespace Kubernetes"
           type: string
-          description: Namespace onde o CR do Kratix será criado (ex: default)
-          default: default
+          description: "Namespace onde o CR do Kratix será criado (ex: default)"
+          default: "default"
         teamId:
-          title: Team ID
+          title: "Team ID"
           type: string
-          description: teamId esperado pelo Promise (ex: acid)
-          default: acid
+          description: "teamId esperado pelo Promise (ex: acid)"
+          default: "acid"
         dbName:
-          title: Nome do DB
+          title: "Nome do DB"
           type: string
-          description: Nome do database (ex: postgres)
-          default: postgres
+          description: "Nome do database (ex: postgres)"
+          default: "postgres"
         env:
-          title: Env (campo do seu CR)
+          title: "Env (campo do seu CR)"
           type: string
-          description: Campo env do request (ex: dev)
-          default: dev
+          description: "Campo env do request (ex: dev)"
+          default: "dev"
         environment:
-          title: Cluster Selector - environment
+          title: "Cluster Selector - environment"
           type: string
-          description: Valor do clusterSelectors.environment usado pelo pipeline (ex: dev)
-          default: dev
+          description: "Valor do clusterSelectors.environment usado pelo pipeline (ex: dev)"
+          default: "dev"
 
-    - title: Repositório Monorepo (DEV = commit direto)
+    - title: "Repositório Monorepo (DEV = commit direto)"
       required:
         - repoUrl
         - targetBranch
       properties:
         repoUrl:
-          title: Monorepo GitHub
+          title: "Monorepo GitHub"
           type: string
-          description: Repo existente no formato "github.com?owner=ORG&repo=REPO"
-          default: github.com?owner=clecioantao&repo=kratix-gitops-mono
+          description: "Repo existente no formato github.com?owner=ORG&repo=REPO"
+          default: "github.com?owner=clecioantao&repo=kratix-gitops-mono"
         targetBranch:
-          title: Branch destino
+          title: "Branch destino"
           type: string
-          default: main
+          default: "main"
 
   steps:
     - id: fetch
-      name: Gerar arquivos do request
+      name: "Gerar arquivos do request"
       action: fetch:template
       input:
-        targetPath: .
+        targetPath: "."
         values:
-          name: ${{ parameters.name }}
-          namespace: ${{ parameters.namespace }}
-          teamId: ${{ parameters.teamId }}
-          dbName: ${{ parameters.dbName }}
-          env: ${{ parameters.env }}
-          environment: ${{ parameters.environment }}
-
-        # Vamos gerar diretamente no layout do monorepo:
-        # platform/requests/postgresql/<name>/request.yaml
+          name: "${{ parameters.name }}"
+          namespace: "${{ parameters.namespace }}"
+          teamId: "${{ parameters.teamId }}"
+          dbName: "${{ parameters.dbName }}"
+          env: "${{ parameters.env }}"
+          environment: "${{ parameters.environment }}"
         template: |
-          # Aqui usamos um "template inline" com os arquivos que serão gerados
-          # (Backstage vai interpretar como conteúdo do workspace)
-          # ---
-          # request.yaml
           apiVersion: marketplace.kratix.io/v1alpha1
           kind: postgresql
           metadata:
@@ -102,20 +96,18 @@ spec:
               environment: ${{ values.environment }}
 
     - id: move
-      name: Organizar no caminho do monorepo
+      name: "Organizar no caminho do monorepo"
       action: fs:rename
       input:
         files:
-          - from: request.yaml
-            to: platform/requests/postgresql/${{ parameters.name }}/request.yaml
+          - from: "request.yaml"
+            to: "platform/requests/postgresql/${{ parameters.name }}/request.yaml"
 
-    # (Opcional) gerar catalog-info.yaml do "request" como um componente no catálogo.
-    # Se você não quiser registrar cada request como entidade, pode remover esse step + register.
     - id: writeCatalogInfo
-      name: Gerar catalog-info.yaml (opcional)
+      name: "Gerar catalog-info.yaml (opcional)"
       action: fs:write
       input:
-        path: platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml
+        path: "platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml"
         content: |
           apiVersion: backstage.io/v1alpha1
           kind: Component
@@ -132,30 +124,28 @@ spec:
             owner: user:default/guest
 
     - id: publish
-      name: Commit direto no monorepo (main)
+      name: "Commit direto no monorepo (main)"
       action: publish:github
       input:
-        repoUrl: ${{ parameters.repoUrl }}
-        branch: ${{ parameters.targetBranch }}
-        # Não cria repo. Só publica/commita no repo existente.
-        # O scaffolder vai commitar os arquivos do workspace para o repo de destino.
+        repoUrl: "${{ parameters.repoUrl }}"
+        branch: "${{ parameters.targetBranch }}"
         commitMessage: "feat(kratix): request postgresql ${{ parameters.name }}"
         description: "Kratix GitOps Monorepo - PostgreSQL request"
-        defaultBranch: ${{ parameters.targetBranch }}
+        defaultBranch: "${{ parameters.targetBranch }}"
 
     - id: register
-      name: Registrar no catálogo (opcional)
+      name: "Registrar no catálogo (opcional)"
       action: catalog:register
       input:
-        repoContentsUrl: ${{ steps.publish.output.repoContentsUrl }}
-        catalogInfoPath: platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml
+        repoContentsUrl: "${{ steps.publish.output.repoContentsUrl }}"
+        catalogInfoPath: "platform/requests/postgresql/${{ parameters.name }}/catalog-info.yaml"
 
   output:
     links:
-      - title: Repositório (monorepo)
-        url: ${{ steps.publish.output.remoteUrl }}
-      - title: Pasta do request no repo
-        url: ${{ steps.publish.output.remoteUrl }}/tree/${{ parameters.targetBranch }}/platform/requests/postgresql/${{ parameters.name }}
-      - title: Abrir no catálogo (se registrou)
+      - title: "Repositório (monorepo)"
+        url: "${{ steps.publish.output.remoteUrl }}"
+      - title: "Pasta do request no repo"
+        url: "${{ steps.publish.output.remoteUrl }}/tree/${{ parameters.targetBranch }}/platform/requests/postgresql/${{ parameters.name }}"
+      - title: "Abrir no catálogo (se registrou)"
         icon: catalog
-        entityRef: component:default/postgresql-${{ parameters.name }}
+        entityRef: "component:default/postgresql-${{ parameters.name }}"
