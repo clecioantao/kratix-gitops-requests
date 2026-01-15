@@ -54,20 +54,15 @@ spec:
           description: "Valor do clusterSelectors.environment usado pelo pipeline (ex: dev)"
           default: "dev"
 
-    - title: "Destino no Monorepo (DEV = commit direto)"
+    - title: "Destino no Monorepo"
       required:
         - repoUrl
-        - targetBranch
       properties:
         repoUrl:
           title: "Monorepo GitHub"
           type: string
           description: "Formato: github.com?owner=ORG&repo=REPO"
           default: "github.com?owner=clecioantao&repo=kratix-gitops-mono"
-        targetBranch:
-          title: "Branch destino"
-          type: string
-          default: "main"
 
   steps:
     - id: fetch
@@ -83,19 +78,18 @@ spec:
           env: "${{ parameters.env }}"
           environment: "${{ parameters.environment }}"
 
-    - id: publish
-      name: "Commit direto no monorepo (main)"
-      action: publish:github
+    - id: pr
+      name: "Abrir Pull Request no monorepo (DEV)"
+      action: publish:github:pull-request
       input:
         repoUrl: "${{ parameters.repoUrl }}"
-        branch: "${{ parameters.targetBranch }}"
-        commitMessage: "feat(kratix): request postgresql ${{ parameters.name }}"
-        description: "Kratix GitOps Monorepo - PostgreSQL request"
-        defaultBranch: "${{ parameters.targetBranch }}"
+        title: "feat(kratix): request postgresql ${{ parameters.name }}"
+        description: "Kratix request gerado pelo Backstage para o recurso: ${{ parameters.name }}"
+        branchName: "kratix/postgresql-${{ parameters.name }}"
 
   output:
     links:
+      - title: "Pull Request"
+        url: "${{ steps.pr.output.remoteUrl }}"
       - title: "Repositório (monorepo)"
-        url: "${{ steps.publish.output.remoteUrl }}"
-      - title: "Pasta do request no repo"
-        url: "${{ steps.publish.output.remoteUrl }}/tree/${{ parameters.targetBranch }}/platform/requests/postgresql/${{ parameters.name }}"
+        url: "${{ steps.pr.output.repoContentsUrl }}"
