@@ -98,6 +98,7 @@ spec:
       input:
         repoUrl: ${{ parameters.host }}?owner=${{ parameters.owner }}&repo=${{ parameters.repo }}
         sourcePath: platform/requests/postgresql/${{ parameters.name }}
+        force: true
 
   output:
     links:
