@@ -9,55 +9,72 @@ spec:
   type: service
 
   parameters:
-    - title: "Dados do Request"
-      required: ["name", "namespace", "teamId", "dbName", "env", "environment"]
+    - title: Dados do Request
+      required:
+        - name
+        - namespace
+        - teamId
+        - dbName
+        - env
+        - environment
       properties:
         name:
-          title: "Nome do request"
+          title: Nome do Request
           type: string
-          description: "Nome do CR do Kratix (ex: clecio-banco-kratix-2)"
+          description: Nome do CR do Kratix (ex: teste-1)
           pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
         namespace:
-          title: "Namespace"
+          title: Namespace
           type: string
-          default: "default"
+          default: default
         teamId:
-          title: "Team ID"
+          title: teamId (Zalando Operator)
           type: string
-          default: "acid"
+          default: acid
         dbName:
-          title: "DB Name"
+          title: Nome do DB
           type: string
-          default: "postgres"
+          default: postgres
         env:
-          title: "Env"
+          title: env
           type: string
-          default: "dev"
-          enum: ["dev", "stg", "prd"]
+          default: dev
         environment:
-          title: "clusterSelectors.environment"
+          title: clusterSelectors.environment
           type: string
-          default: "dev"
-          enum: ["dev", "stg", "prd"]
+          default: dev
 
-    - title: "Monorepo (commit direto)"
-      required: ["repoUrl"]
+    - title: Monorepo (commit direto)
+      description: "Em DEV, comitamos direto na main do monorepo."
+      required: []
       properties:
-        repoUrl:
-          title: "Repositório GitHub (monorepo existente)"
+        host:
+          title: Host
           type: string
-          description: "Escolha o repo onde os requests vivem (ex: kratix-gitops-mono)."
-          ui:field: RepoUrlPicker
-          ui:options:
-            allowedHosts:
-              - github.com
+          default: github.com
+          enum: [github.com]
+          ui:disabled: true
+
+        owner:
+          title: Owner
+          type: string
+          default: clecioantao
+          ui:widget: hidden
+
+        repo:
+          title: Repositório
+          type: string
+          default: kratix-gitops-mono
+          ui:widget: hidden
+
+        # opcional: se você quiser deixar visível, remova ui:widget: hidden
+        # e mantenha o default preenchido.
 
   steps:
     - id: fetch
-      name: "Gerar arquivos do request"
+      name: Gerar arquivos do request
       action: fetch:template
       input:
-        # ✅ Na sua versão é url (não template)
         url: ./skeleton
         values:
           name: ${{ parameters.name }}
@@ -68,7 +85,7 @@ spec:
           environment: ${{ parameters.environment }}
 
     - id: move
-      name: "Mover para a pasta final (sem {{}} no path)"
+      name: Mover para a pasta final (sem {{}} no path)
       action: fs:rename
       input:
         files:
@@ -76,23 +93,15 @@ spec:
             to: platform/requests/postgresql/${{ parameters.name }}
 
     - id: push
-      name: "Commitar no monorepo (main)"
+      name: Commitar no monorepo (main)
       action: github:repo:push
       input:
-        repoUrl: ${{ parameters.repoUrl }}
-        defaultBranch: main
-        protectDefaultBranch: false
-        # ✅ Na sua action é gitCommitMessage (não commitMessage)
-        gitCommitMessage: "feat(kratix): request postgresql ${{ parameters.name }}"
-        # ✅ Na sua action é sourcePath (não targetPath)
-        sourcePath: .
-        # Se você tiver integração do GitHub configurada no Backstage, pode remover token.
-        # Se NÃO tiver, precisa passar token (PAT) via secrets/config.
-        # token: ${{ secrets.GITHUB_TOKEN }}
+        repoUrl: ${{ parameters.host }}?owner=${{ parameters.owner }}&repo=${{ parameters.repo }}
+        sourcePath: platform/requests/postgresql/${{ parameters.name }}
 
   output:
     links:
-      - title: "Repositório (monorepo)"
-        url: ${{ steps.push.output.remoteUrl }}
-      - title: "Conteúdo no GitHub"
-        url: ${{ steps.push.output.repoContentsUrl }}
+      - title: "Abrir monorepo"
+        url: https://github.com/${{ parameters.owner }}/${{ parameters.repo }}
+      - title: "Pasta do request"
+        url: https://github.com/${{ parameters.owner }}/${{ parameters.repo }}/tree/main/platform/requests/postgresql/${{ parameters.name }}
