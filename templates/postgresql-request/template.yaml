@@ -71,62 +71,62 @@ spec:
         # e mantenha o default preenchido.
 
   steps:
-steps:
-  - id: fetch
-    name: Gerar arquivos do request
-    action: fetch:template
-    input:
-      url: ./skeleton
-      values:
-        name: ${{ parameters.name }}
-        namespace: ${{ parameters.namespace }}
-        teamId: ${{ parameters.teamId }}
-        dbName: ${{ parameters.dbName }}
-        env: ${{ parameters.env }}
-        environment: ${{ parameters.environment }}
 
-  - id: move
-    name: Mover para a pasta final
-    action: fs:rename
-    input:
-      files:
-        - from: platform/requests/postgresql/_request
-          to: platform/requests/postgresql/${{ parameters.name }}
+    - id: fetch
+      name: Gerar arquivos do request
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace }}
+          teamId: ${{ parameters.teamId }}
+          dbName: ${{ parameters.dbName }}
+          env: ${{ parameters.env }}
+          environment: ${{ parameters.environment }}
 
-  # 1️⃣ CLONA O MONOREPO REAL
-  - id: clone
-    name: Clonar monorepo
-    action: git:clone
-    input:
-      repoUrl: https://github.com/${{ parameters.owner }}/${{ parameters.repo }}
-      branch: main
-      targetPath: repo
+    - id: move
+      name: Mover para a pasta final
+      action: fs:rename
+      input:
+        files:
+          - from: platform/requests/postgresql/_request
+            to: platform/requests/postgresql/${{ parameters.name }}
 
-  # 2️⃣ COPIA OS ARQUIVOS GERADOS PARA O CLONE
-  - id: copy
-    name: Copiar request para o monorepo
-    action: fs:copy
-    input:
-      from: platform/requests/postgresql/${{ parameters.name }}
-      to: repo/platform/requests/postgresql/${{ parameters.name }}
+    # 1️⃣ CLONA O MONOREPO REAL
+    - id: clone
+      name: Clonar monorepo
+      action: git:clone
+      input:
+        repoUrl: https://github.com/${{ parameters.owner }}/${{ parameters.repo }}
+        branch: main
+        targetPath: repo
 
-  # 3️⃣ COMMITA
-  - id: commit
-    name: Commitar request
-    action: git:commit
-    input:
-      repoPath: repo
-      message: "feat(kratix): request postgresql ${{ parameters.name }}"
-      authorName: Backstage
-      authorEmail: backstage@local
+    # 2️⃣ COPIA OS ARQUIVOS GERADOS PARA O CLONE
+    - id: copy
+      name: Copiar request para o monorepo
+      action: fs:copy
+      input:
+        from: platform/requests/postgresql/${{ parameters.name }}
+        to: repo/platform/requests/postgresql/${{ parameters.name }}
 
-  # 4️⃣ PUSH NORMAL (FAST-FORWARD)
-  - id: push
-    name: Push no monorepo
-    action: git:push
-    input:
-      repoPath: repo
-      branch: main
+    # 3️⃣ COMMITA
+    - id: commit
+      name: Commitar request
+      action: git:commit
+      input:
+        repoPath: repo
+        message: "feat(kratix): request postgresql ${{ parameters.name }}"
+        authorName: Backstage
+        authorEmail: backstage@local
+
+    # 4️⃣ PUSH NORMAL (FAST-FORWARD)
+    - id: push
+      name: Push no monorepo
+      action: git:push
+      input:
+        repoPath: repo
+        branch: main
 
         
 
