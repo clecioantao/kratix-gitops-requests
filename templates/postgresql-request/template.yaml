@@ -1,3 +1,76 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: kratix-postgresql-monorepo
+  title: "Kratix: PostgreSQL (Monorepo Requests)"
+  description: "Cria um request PostgreSQL do Kratix dentro de um monorepo (platform/requests/...)."
+spec:
+  owner: user:default/guest
+  type: service
+
+  parameters:
+    - title: Dados do Request
+      required:
+        - name
+        - namespace
+        - teamId
+        - dbName
+        - env
+        - environment
+      properties:
+        name:
+          title: Nome do Request
+          type: string
+          description: Nome do CR do Kratix
+          pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        namespace:
+          title: Namespace
+          type: string
+          default: default
+        teamId:
+          title: teamId (Zalando Operator)
+          type: string
+          default: acid
+        dbName:
+          title: Nome do DB
+          type: string
+          default: postgres
+        env:
+          title: env
+          type: string
+          default: dev
+        environment:
+          title: clusterSelectors.environment
+          type: string
+          default: dev
+
+    - title: Monorepo (commit direto)
+      description: "Em DEV, comitamos direto na main do monorepo."
+      required: []
+      properties:
+        host:
+          title: Host
+          type: string
+          default: github.com
+          enum: [github.com]
+          ui:disabled: true
+
+        owner:
+          title: Owner
+          type: string
+          default: clecioantao
+          ui:widget: hidden
+
+        repo:
+          title: Repositório
+          type: string
+          default: kratix-gitops-mono
+          ui:widget: hidden
+
+        # opcional: se você quiser deixar visível, remova ui:widget: hidden
+        # e mantenha o default preenchido.
+
+  steps:
 steps:
   - id: fetch
     name: Gerar arquivos do request
@@ -54,3 +127,12 @@ steps:
     input:
       repoPath: repo
       branch: main
+
+        
+
+  output:
+    links:
+      - title: "Abrir monorepo"
+        url: https://github.com/${{ parameters.owner }}/${{ parameters.repo }}
+      - title: "Pasta do request"
+        url: https://github.com/${{ parameters.owner }}/${{ parameters.repo }}/tree/main/platform/requests/postgresql/${{ parameters.name }}
