@@ -21,7 +21,7 @@ spec:
         name:
           title: Nome do Request
           type: string
-          description: Nome do CR do Kratix (ex: teste-1)
+          description: Nome do CR do Kratix
           pattern: "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
         namespace:
           title: Namespace
